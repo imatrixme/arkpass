@@ -253,9 +253,20 @@ function uninstall_reinstall {
     echo "Reinstallation completed."
 }
 
+function get_latest_domain {
+    crt_files=($TLS_DIR/*.crt)
+    if [ ${#crt_files[@]} -eq 0 ]; then
+        echo "没有找到证书文件。"
+        exit 1
+    fi
+    latest_crt=$(ls -t $TLS_DIR/*.crt | head -n 1)
+    latest_domain=$(basename $latest_crt .crt)
+    echo $latest_domain
+}
+
 function view_account {
     secret=$(jq -r '.inbound.secret' $CONFIG_FILE)
-    domain=$(jq -r '.inbound.tls.cert_path' $CONFIG_FILE | awk -F'/' '{print $(NF-1)}')
+    domain=$(get_latest_domain)
     port=$(jq -r '.inbound.port' $CONFIG_FILE)
     echo "Account Information:"
     jq . $CONFIG_FILE
