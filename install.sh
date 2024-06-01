@@ -243,6 +243,25 @@ function update_certificate {
     fi
 }
 
+function update_certificate_custom {
+    read -p "请输入证书文件的绝对路径 (cert_path): " custom_cert_path
+    while [ ! -f "$custom_cert_path" ]; do
+        echo "证书文件不存在，请重新输入。"
+        read -p "请输入证书文件的绝对路径 (cert_path): " custom_cert_path
+    done
+    
+    read -p "请输入密钥文件的绝对路径 (key_path): " custom_key_path
+    while [ ! -f "$custom_key_path" ]; do
+        echo "密钥文件不存在，请重新输入。"
+        read -p "请输入密钥文件的绝对路径 (key_path): " custom_key_path
+    done
+    
+    sed -i "s|\"cert_path\": \".*\"|\"cert_path\": \"$custom_cert_path\"|" "$CONFIG_FILE"
+    sed -i "s|\"key_path\": \".*\"|\"key_path\": \"$custom_key_path\"|" "$CONFIG_FILE"
+    echo "配置文件中的证书路径已更新。"
+    view_account
+}
+
 function uninstall_reinstall {
     stop_service
     echo "Removing trojan-rust and config files..."
@@ -315,6 +334,7 @@ function change_port {
 }
 
 function show_menu {
+    echo "\n\n--------------------"
     echo "1. 启动"
     echo "2. 停止"
     echo "3. 重启"
@@ -325,14 +345,15 @@ function show_menu {
     echo "7. 取消定时重启"
     echo "--------------------"
     echo "8. 更新证书"
+    echo "9. 使用自定义证书更新"
     echo "--------------------"
-    echo "9. 卸载重装"
+    echo "10. 卸载重装"
     echo "--------------------"
-    echo "10. 查看账号"
-    echo "11. 变更账号"
-    echo "12. 变更端口"
+    echo "11. 查看账号"
+    echo "12. 变更账号"
+    echo "13. 变更端口"
     echo "--------------------"
-    echo "13. 退出"
+    echo "14. 退出"
 }
 
 install_acme_sh
@@ -369,18 +390,21 @@ while true; do
             update_certificate
             ;;
         9)
-            uninstall_reinstall
+            update_certificate_custom
             ;;
         10)
-            view_account
+            uninstall_reinstall
             ;;
         11)
-            change_account
+            view_account
             ;;
         12)
-            change_port
+            change_account
             ;;
         13)
+            change_port
+            ;;
+        14)
             exit 0
             ;;
         *)
