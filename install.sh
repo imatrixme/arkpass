@@ -11,6 +11,10 @@ ACME_SH=$ACME_DIR/acme.sh
 EMAIL=sslmatrix@gmail.com
 REPO_URL=https://github.com/imatrixme/bypass.git
 
+# 获取脚本的绝对路径
+SCRIPT_DIR=$(cd $(dirname $0) && pwd)
+TLS_DIR_ABS=$SCRIPT_DIR/$TLS_DIR
+
 function install_cron_if_needed {
     if ! command -v crontab &> /dev/null; then
         echo "cron is not installed. Installing..."
@@ -73,8 +77,8 @@ function generate_config {
         "port": 9300,
         "secret": "79cfdefa-aa2f-4722-ab3f-c94c67c0d500",
         "tls": {
-            "cert_path": "$TLS_DIR/domain.crt",
-            "key_path": "$TLS_DIR/domain.key"
+            "cert_path": "$TLS_DIR_ABS/domain.crt",
+            "key_path": "$TLS_DIR_ABS/domain.key"
         }
     },
     "outbound": {
@@ -207,8 +211,8 @@ function update_certificate {
         $ACME_SH --issue -d $domain --standalone --force
         if [ $? -eq 0 ]; then
             $ACME_SH --install-cert --force -d $domain \
-                --cert-file $TLS_DIR/$domain.crt \
-                --key-file $TLS_DIR/$domain.key
+                --cert-file $TLS_DIR_ABS/$domain.crt \
+                --key-file $TLS_DIR_ABS/$domain.key
             echo "证书已更新并安装到 $TLS_DIR 目录下。"
             generate_config
         else
