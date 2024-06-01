@@ -13,7 +13,7 @@ REPO_URL=https://github.com/imatrixme/bypass.git
 
 # 获取脚本的绝对路径
 SCRIPT_DIR=$(cd $(dirname $0) && pwd)
-TLS_DIR_ABS=$SCRIPT_DIR/$TLS_DIR
+TLS_DIR_ABS=$(realpath $TLS_DIR)
 
 function install_cron_if_needed {
     if ! command -v crontab &> /dev/null; then
