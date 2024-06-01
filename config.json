@@ -1,0 +1,17 @@
+{
+    "inbound": {
+        "mode": "TCP",
+        "protocol": "TROJAN",
+        "address": "0.0.0.0",
+        "port": 9300,
+        "secret": "79cfdefa-aa2f-4722-ab3f-c94c67c0d500",
+        "tls": {
+            "cert_path": "/etc/v2ray-agent/tls/domain.crt",
+            "key_path": "/etc/v2ray-agent/tls/domain.key"
+        }
+    },
+    "outbound": {
+        "mode": "DIRECT",
+        "protocol": "DIRECT"
+    }
+}
