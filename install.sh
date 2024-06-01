@@ -261,17 +261,11 @@ function get_latest_domain {
     fi
     latest_crt=$(ls -t $TLS_DIR/*.crt | head -n 1)
     latest_domain=$(basename $latest_crt .crt)
+    jq --arg cert_path "$TLS_DIR_ABS/$latest_domain.crt" --arg key_path "$TLS_DIR_ABS/$latest_domain.key" '.inbound.tls.cert_path = $cert_path | .inbound.tls.key_path = $key_path' $CONFIG_FILE > tmp.$$.json && mv tmp.$$.json $CONFIG_FILE
     echo $latest_domain
 }
 
-function update_cert_paths {
-    latest_domain=$(get_latest_domain)
-    sed -i "s|\"cert_path\": \".*\"|\"cert_path\": \"$TLS_DIR_ABS/$latest_domain.crt\"|" "$CONFIG_FILE"
-    sed -i "s|\"key_path\": \".*\"|\"key_path\": \"$TLS_DIR_ABS/$latest_domain.key\"|" "$CONFIG_FILE"
-}
-
 function view_account {
-    update_cert_paths
     secret=$(jq -r '.inbound.secret' $CONFIG_FILE)
     domain=$(get_latest_domain)
     port=$(jq -r '.inbound.port' $CONFIG_FILE)
@@ -284,12 +278,13 @@ function view_account {
 
 function change_account {
     current_secret=$(jq -r '.inbound.secret' $CONFIG_FILE)
-    echo "当前密码为: $current_secret"
-    read -p "是否需要手动设置密码？ (y/n): " manual_password
-    if [[ $manual_password == "y" || $manual_password == "Y" ]]; then
+    echo "当前账号: $current_secret"
+    read -p "是否需要自定义一个密码？ (y/n): " choice
+    if [[ $choice == "y" || $choice == "Y" ]]; then
         read -p "请输入一个大于6位的密码: " new_secret
-        while [[ ${#new_secret} -le 6 ]]; do
-            read -p "密码长度必须大于6位，请重新输入: " new_secret
+        while [ ${#new_secret} -le 6 ]; do
+            echo "密码必须大于6位，请重新输入。"
+            read -p "请输入一个大于6位的密码: " new_secret
         done
     else
         new_secret=$(cat /proc/sys/kernel/random/uuid)
@@ -302,12 +297,13 @@ function change_account {
 
 function change_port {
     current_port=$(jq -r '.inbound.port' $CONFIG_FILE)
-    echo "当前端口号为: $current_port"
-    read -p "是否需要手动设置端口号？ (y/n): " manual_port
-    if [[ $manual_port == "y" || $manual_port == "Y" ]]; then
-        read -p "请输入一个介于9000和9999之间的端口号: " new_port
+    echo "当前端口: $current_port"
+    read -p "是否需要自定义一个端口？ (y/n): " choice
+    if [[ $choice == "y" || $choice == "Y" ]]; then
+        read -p "请输入一个介于9000到9999之间的端口: " new_port
         while [[ $new_port -lt 9000 || $new_port -gt 9999 ]]; do
-            read -p "端口号必须介于9000和9999之间，请重新输入: " new_port
+            echo "端口必须介于9000到9999之间，请重新输入。"
+            read -p "请输入一个介于9000到9999之间的端口: " new_port
         done
     else
         new_port=$(shuf -i 9000-9999 -n 1)
