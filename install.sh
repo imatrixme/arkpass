@@ -35,6 +35,11 @@ function install_git_if_needed {
     fi
 }
 
+function install_dependencies {
+    sudo apt-get update
+    sudo apt-get install -y jq wget
+}
+
 function install_acme_sh {
     if [ ! -f "$ACME_SH" ]; then
         echo "Downloading acme.sh..."
@@ -42,6 +47,7 @@ function install_acme_sh {
         git clone https://github.com/acmesh-official/acme.sh.git $ACME_DIR
         cd $ACME_DIR
         ./acme.sh --install --home $ACME_DIR --accountemail $EMAIL
+        $ACME_SH --set-default-ca --server letsencrypt
         cd -
     else
         echo "acme.sh already installed."
@@ -332,9 +338,24 @@ function change_port {
     view_account
 }
 
+function bbrInstall {
+    echo "=============================================================="
+    echo "BBR、DD脚本用的[ylx2016]的成熟作品，地址[https://github.com/ylx2016/Linux-NetSpeed]，请熟知"
+    echo "1.安装脚本【推荐原版BBR+FQ】"
+    echo "2.回退主目录"
+    echo "=============================================================="
+    read -r -p "请选择：" installBBRStatus
+    if [[ "${installBBRStatus}" == "1" ]]; then
+        wget -N --no-check-certificate "https://raw.githubusercontent.com/ylx2016/Linux-NetSpeed/master/tcp.sh" && chmod +x tcp.sh && ./tcp.sh
+    else
+        show_menu
+    fi
+}
+
 function show_menu {
-    echo ""
-    echo ""
+    echo "--------------------"
+    echo "Arkpass 管理脚本"
+    echo "--------------------"
     echo "1. 启动"
     echo "2. 停止"
     echo "3. 重启"
@@ -353,9 +374,12 @@ function show_menu {
     echo "12. 变更账号"
     echo "13. 变更端口"
     echo "--------------------"
-    echo "14. 退出"
+    echo "14. 安装 BBR"
+    echo "--------------------"
+    echo "15. 退出"
 }
 
+install_dependencies
 install_acme_sh
 setup_tls_dir
 download_trojan_rust
@@ -405,6 +429,9 @@ while true; do
             change_port
             ;;
         14)
+            bbrInstall
+            ;;
+        15)
             exit 0
             ;;
         *)
