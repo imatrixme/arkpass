@@ -185,9 +185,24 @@ function check_certificate {
         return 1
     fi
 
-    openssl x509 -checkend 2592000 -noout -in "$crt_file"
-    if [ $? -eq 0 ]; then
+    openssl x509 -enddate -noout -in "$crt_file" | sed 's/notAfter=//g' | xargs -I {} date -d {} +%s > enddate.txt
+    openssl x509 -startdate -noout -in "$crt_file" | sed 's/notBefore=//g' | xargs -I {} date -d {} +%s > startdate.txt
+
+    end_date=$(cat enddate.txt)
+    start_date=$(cat startdate.txt)
+    current_date=$(date +%s)
+
+    remaining_days=$(( (end_date - current_date) / 86400 ))
+    valid_days=$(( (end_date - start_date) / 86400 ))
+
+    if [ $current_date -lt $end_date ]; then
         echo "证书未过期。"
+        echo "域名: $domain"
+        echo "CA: Let's Encrypt"
+        echo "申请日期: $(date -d @$start_date '+%Y-%m-%d %H:%M:%S')"
+        echo "有效期: $valid_days 天"
+        echo "过期时间: $(date -d @$end_date '+%Y-%m-%d %H:%M:%S')"
+        echo "剩余时间: $remaining_days 天"
         read -p "是否继续申请新证书？ (y/n): " choice
         case "$choice" in
             y|Y )
@@ -210,11 +225,18 @@ function update_certificate {
         $ACME_SH --set-default-ca --server letsencrypt
         $ACME_SH --issue -d $domain --standalone --force
         if [ $? -eq 0 ]; then
-            $ACME_SH --install-cert --force -d $domain \
+            $ACME_SH --install-cert -d $domain \
                 --cert-file $TLS_DIR_ABS/$domain.crt \
                 --key-file $TLS_DIR_ABS/$domain.key
             echo "证书已更新并安装到 $TLS_DIR 目录下。"
-            generate_config
+            read -p "是否要替换配置文件中的证书路径？ (y/n): " replace_choice
+            if [[ $replace_choice == "y" || $replace_choice == "Y" || -z $replace_choice ]]; then
+                sed -i "s|\"cert_path\": \".*\"|\"cert_path\": \"$TLS_DIR_ABS/$domain.crt\"|" "$CONFIG_FILE"
+                sed -i "s|\"key_path\": \".*\"|\"key_path\": \"$TLS_DIR_ABS/$domain.key\"|" "$CONFIG_FILE"
+                echo "配置文件中的证书路径已更新。"
+            else
+                echo "配置文件中的证书路径未更新。"
+            fi
         else
             echo "证书申请失败，请检查日志。"
         fi
@@ -231,17 +253,52 @@ function uninstall_reinstall {
     echo "Reinstallation completed."
 }
 
+function view_account {
+    secret=$(jq -r '.inbound.secret' $CONFIG_FILE)
+    domain=$(jq -r '.inbound.tls.cert_path' $CONFIG_FILE | awk -F'/' '{print $(NF-1)}')
+    port=$(jq -r '.inbound.port' $CONFIG_FILE)
+    echo "Account Information:"
+    jq . $CONFIG_FILE
+    echo ""
+    echo "trojan://$secret@$domain:$port?peer=$domain&sni=$domain&tls-verification=1&cert=1&tls13=1&udp=1&tfo=1#TrojanRust"
+    echo ""
+}
+
+function change_account {
+    new_secret=$(cat /proc/sys/kernel/random/uuid)
+    jq --arg new_secret "$new_secret" '.inbound.secret = $new_secret' $CONFIG_FILE > tmp.$$.json && mv tmp.$$.json $CONFIG_FILE
+    echo "账号已更新为: $new_secret"
+    restart_service
+    view_account
+}
+
+function change_port {
+    new_port=$(shuf -i 9000-9999 -n 1)
+    jq --argjson new_port "$new_port" '.inbound.port = $new_port' $CONFIG_FILE > tmp.$$.json && mv tmp.$$.json $CONFIG_FILE
+    echo "端口已更新为: $new_port"
+    restart_service
+    view_account
+}
+
 function show_menu {
     echo "1. 启动"
     echo "2. 停止"
     echo "3. 重启"
+    echo "--------------------"
     echo "4. 配置开机自启动"
     echo "5. 取消开机自启动"
     echo "6. 配置定时重启"
     echo "7. 取消定时重启"
+    echo "--------------------"
     echo "8. 更新证书"
+    echo "--------------------"
     echo "9. 卸载重装"
-    echo "10. 退出"
+    echo "--------------------"
+    echo "10. 查看账号"
+    echo "11. 变更账号"
+    echo "12. 变更端口"
+    echo "--------------------"
+    echo "13. 退出"
 }
 
 install_acme_sh
@@ -281,6 +338,15 @@ while true; do
             uninstall_reinstall
             ;;
         10)
+            view_account
+            ;;
+        11)
+            change_account
+            ;;
+        12)
+            change_port
+            ;;
+        13)
             exit 0
             ;;
         *)
