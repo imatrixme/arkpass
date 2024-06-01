@@ -1,15 +1,15 @@
 #!/bin/bash
 
-SERVICE_NAME=trojan-rust
+SERVICE_NAME=arkpass
 CONFIG_FILE=./config/config.json
-EXECUTABLE=./trojan-rust
+EXECUTABLE=./arkpass
 PID_FILE=./${SERVICE_NAME}.pid
 TLS_DIR=./config/tls
 TOOLS_DIR=./tools
 ACME_DIR=$TOOLS_DIR/acme
 ACME_SH=$ACME_DIR/acme.sh
 EMAIL=sslmatrix@gmail.com
-REPO_URL=https://github.com/imatrixme/bypass.git
+REPO_URL=https://github.com/imatrixme/arkpass.git
 
 # 获取脚本的绝对路径
 SCRIPT_DIR=$(cd $(dirname $0) && pwd)
@@ -52,12 +52,11 @@ function download_trojan_rust {
     if [ ! -f "$EXECUTABLE" ]; then
         echo "$EXECUTABLE not found. Downloading from $REPO_URL..."
         install_git_if_needed
-        git clone $REPO_URL
-        cd bypass
-        make
-        mv trojan-rust ..
+        git clone $REPO_URL arkpassrepo
+        cd arkpassrepo
+        mv arkpass ..
         cd ..
-        rm -rf bypass
+        rm -rf arkpassrepo
         echo "$EXECUTABLE downloaded and built."
     else
         echo "$EXECUTABLE already exists."
@@ -264,7 +263,7 @@ function update_certificate_custom {
 
 function uninstall_reinstall {
     stop_service
-    echo "Removing trojan-rust and config files..."
+    echo "Removing arkpass and config files..."
     rm -f "$EXECUTABLE"
     rm -f "$CONFIG_FILE"
     download_trojan_rust
