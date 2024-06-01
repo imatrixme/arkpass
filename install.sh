@@ -89,6 +89,16 @@ EOL
     fi
 }
 
+function setup_tls_dir {
+    if [ ! -d "$TLS_DIR" ]; then
+        echo "Creating $TLS_DIR directory..."
+        mkdir -p "$TLS_DIR"
+        echo "$TLS_DIR directory created."
+    else
+        echo "$TLS_DIR directory already exists."
+    fi
+}
+
 function setup_autostart {
     install_cron_if_needed
 
@@ -194,9 +204,9 @@ function update_certificate {
     check_certificate $domain
     if [ $? -eq 1 ]; then
         $ACME_SH --set-default-ca --server letsencrypt
-        $ACME_SH --issue -d $domain --standalone
+        $ACME_SH --issue -d $domain --standalone --force
         if [ $? -eq 0 ]; then
-            $ACME_SH --install-cert -d $domain \
+            $ACME_SH --install-cert --force -d $domain \
                 --cert-file $TLS_DIR/$domain.crt \
                 --key-file $TLS_DIR/$domain.key
             echo "证书已更新并安装到 $TLS_DIR 目录下。"
@@ -231,6 +241,7 @@ function show_menu {
 }
 
 install_acme_sh
+setup_tls_dir
 download_trojan_rust
 generate_config
 
