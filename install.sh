@@ -334,7 +334,8 @@ function change_port {
 }
 
 function show_menu {
-    echo "\n\n--------------------"
+    echo ""
+    echo ""
     echo "1. 启动"
     echo "2. 停止"
     echo "3. 重启"
