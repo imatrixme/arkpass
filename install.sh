@@ -264,7 +264,14 @@ function get_latest_domain {
     echo $latest_domain
 }
 
+function update_cert_paths {
+    latest_domain=$(get_latest_domain)
+    sed -i "s|\"cert_path\": \".*\"|\"cert_path\": \"$TLS_DIR_ABS/$latest_domain.crt\"|" "$CONFIG_FILE"
+    sed -i "s|\"key_path\": \".*\"|\"key_path\": \"$TLS_DIR_ABS/$latest_domain.key\"|" "$CONFIG_FILE"
+}
+
 function view_account {
+    update_cert_paths
     secret=$(jq -r '.inbound.secret' $CONFIG_FILE)
     domain=$(get_latest_domain)
     port=$(jq -r '.inbound.port' $CONFIG_FILE)
@@ -276,7 +283,17 @@ function view_account {
 }
 
 function change_account {
-    new_secret=$(cat /proc/sys/kernel/random/uuid)
+    current_secret=$(jq -r '.inbound.secret' $CONFIG_FILE)
+    echo "当前密码为: $current_secret"
+    read -p "是否需要手动设置密码？ (y/n): " manual_password
+    if [[ $manual_password == "y" || $manual_password == "Y" ]]; then
+        read -p "请输入一个大于6位的密码: " new_secret
+        while [[ ${#new_secret} -le 6 ]]; do
+            read -p "密码长度必须大于6位，请重新输入: " new_secret
+        done
+    else
+        new_secret=$(cat /proc/sys/kernel/random/uuid)
+    fi
     jq --arg new_secret "$new_secret" '.inbound.secret = $new_secret' $CONFIG_FILE > tmp.$$.json && mv tmp.$$.json $CONFIG_FILE
     echo "账号已更新为: $new_secret"
     restart_service
@@ -284,7 +301,17 @@ function change_account {
 }
 
 function change_port {
-    new_port=$(shuf -i 9000-9999 -n 1)
+    current_port=$(jq -r '.inbound.port' $CONFIG_FILE)
+    echo "当前端口号为: $current_port"
+    read -p "是否需要手动设置端口号？ (y/n): " manual_port
+    if [[ $manual_port == "y" || $manual_port == "Y" ]]; then
+        read -p "请输入一个介于9000和9999之间的端口号: " new_port
+        while [[ $new_port -lt 9000 || $new_port -gt 9999 ]]; do
+            read -p "端口号必须介于9000和9999之间，请重新输入: " new_port
+        done
+    else
+        new_port=$(shuf -i 9000-9999 -n 1)
+    fi
     jq --argjson new_port "$new_port" '.inbound.port = $new_port' $CONFIG_FILE > tmp.$$.json && mv tmp.$$.json $CONFIG_FILE
     echo "端口已更新为: $new_port"
     restart_service
